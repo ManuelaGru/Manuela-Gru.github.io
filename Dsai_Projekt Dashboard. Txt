@@ -1,0 +1,303 @@
+https://github.com/ManuelaGru/Manuela-Gru.github.io.git<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TechnikGeschäft — Sales Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f5f7; color: #1a1a1a; font-size: 13px; }
+  .header { background: #1a3a5c; color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.3px; }
+  .header .sub { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+  .filter-bar { background: #fff; border-bottom: 1px solid #dde2ea; padding: 10px 20px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .filter-group { display: flex; flex-direction: column; gap: 3px; }
+  .filter-group label { font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .filter-group select { border: 1px solid #ccd1d9; border-radius: 4px; padding: 5px 8px; font-size: 12px; background: #fafafa; cursor: pointer; min-width: 130px; color: #1a1a1a; }
+  .filter-group select:focus { outline: 2px solid #0078d4; border-color: #0078d4; }
+  .badge { margin-left: auto; font-size: 11px; padding: 4px 10px; background: #e8f0fe; color: #1a56db; border-radius: 12px; font-weight: 500; }
+  .main { padding: 16px 20px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: #fff; border-radius: 6px; padding: 14px 16px; border-left: 4px solid #0078d4; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .kpi:nth-child(2) { border-left-color: #107c41; }
+  .kpi:nth-child(3) { border-left-color: #d83b01; }
+  .kpi:nth-child(4) { border-left-color: #8764b8; }
+  .kpi-label { font-size: 10px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+  .kpi-value { font-size: 24px; font-weight: 700; color: #1a1a1a; }
+  .kpi-sub { font-size: 10px; color: #999; margin-top: 3px; }
+  .charts-row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .charts-row2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .card { background: #fff; border-radius: 6px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .card-title { font-size: 11px; font-weight: 600; color: #444; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; font-size: 11px; color: #555; }
+  .legend span { display: flex; align-items: center; gap: 4px; }
+  .ld { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  canvas { display: block; }
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    .charts-row, .charts-row2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>TechnikGeschäft — Sales Dashboard</h1>
+    <div class="sub">Power BI Demo · Quelle: FaktdatenTechnik · DIM Geographie · DIM Produkt · 2019–2020</div>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <div class="filter-group">
+    <label>Land (Slicer)</label>
+    <select id="sl-land" onchange="applyFilters()">
+      <option value="">Alle Länder</option>
+      <option>Deutschland</option><option>Frankreich</option><option>Spanien</option>
+      <option>Italien</option><option>Niederlande</option><option>Schweiz</option>
+      <option>Österreich</option><option>Belgien</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Produktkategorie (Slicer)</label>
+    <select id="sl-kat" onchange="applyFilters()">
+      <option value="">Alle Kategorien</option>
+      <option>Handy</option><option>Laptop</option><option>Maus</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Jahr (Slicer)</label>
+    <select id="sl-jahr" onchange="applyFilters()">
+      <option value="">Alle Jahre</option>
+      <option>2019</option><option>2020</option>
+    </select>
+  </div>
+  <div class="badge" id="filter-badge">Alle Daten</div>
+</div>
+
+<div class="main">
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Gesamtumsatz</div><div class="kpi-value" id="kpi-umsatz">—</div><div class="kpi-sub">Verkaufspreis × Menge</div></div>
+    <div class="kpi"><div class="kpi-label">Transaktionen</div><div class="kpi-value" id="kpi-trans">—</div><div class="kpi-sub">Anzahl Datensätze</div></div>
+    <div class="kpi"><div class="kpi-label">Gesamtmenge</div><div class="kpi-value" id="kpi-menge">—</div><div class="kpi-sub">Verkaufte Einheiten</div></div>
+    <div class="kpi"><div class="kpi-label">Ø Verkaufspreis</div><div class="kpi-value" id="kpi-avg">—</div><div class="kpi-sub">Durchschnitt pro Zeile</div></div>
+  </div>
+
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title">Umsatz nach Monat (Balkendiagramm)</div>
+      <div class="legend" id="leg-time"></div>
+      <div style="position:relative;height:210px;"><canvas id="cTime"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Umsatz nach Region (Kreisdiagramm)</div>
+      <div style="position:relative;height:180px;"><canvas id="cReg"></canvas></div>
+      <div class="legend" id="leg-reg" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <div class="charts-row2">
+    <div class="card">
+      <div class="card-title">Umsatz nach Land</div>
+      <div style="position:relative;height:230px;"><canvas id="cLand"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Umsatz nach Produktkategorie</div>
+      <div style="position:relative;height:230px;"><canvas id="cKat"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Top Produkte nach Menge</div>
+      <div style="position:relative;height:230px;"><canvas id="cProd"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DIM_GEO = {
+  'Deutschland':'Westeuropa','Frankreich':'Westeuropa','Niederlande':'Westeuropa','Belgien':'Westeuropa',
+  'Spanien':'Südeuropa','Italien':'Südeuropa',
+  'Schweiz':'Mitteleuropa','Österreich':'Mitteleuropa'
+};
+const DIM_PROD = {
+  'iPhone 11':'Handy','OnePlus 7T':'Handy','Samsung Galaxy':'Handy',
+  'MacBook Pro 13':'Laptop','Dell XPS 15':'Laptop','HP Spectre x360':'Laptop','Lenovo ThinkPad':'Laptop',
+  'Logitech MX Mas':'Maus'
+};
+const COLORS_LAND = {
+  Deutschland:'#0078d4',Frankreich:'#107c41',Spanien:'#d83b01',
+  Italien:'#d13438',Niederlande:'#8764b8',Schweiz:'#ca5010',
+  Österreich:'#038387',Belgien:'#737373'
+};
+const COLORS_REG = { Westeuropa:'#0078d4', Südeuropa:'#107c41', Mitteleuropa:'#ca5010' };
+const COLORS_KAT = { Handy:'#0078d4', Laptop:'#107c41', Maus:'#ca5010' };
+
+const RAW = [
+  ['Deutschland','iPhone 11',20190131,799,10],['Frankreich','OnePlus 7T',20190131,599,8],
+  ['Spanien','Samsung Galaxy',20190131,699,12],['Italien','MacBook Pro 13',20190131,1499,5],
+  ['Niederlande','Dell XPS 15',20190131,1299,6],['Frankreich','HP Spectre x360',20190131,1399,4],
+  ['Deutschland','Lenovo ThinkPad',20190131,1599,3],['Belgien','Logitech MX Mas',20190131,99,15],
+  ['Deutschland','iPhone 11',20190228,799,7],['Frankreich','OnePlus 7T',20190228,599,9],
+  ['Spanien','Samsung Galaxy',20190228,699,10],['Italien','MacBook Pro 13',20190228,1499,4],
+  ['Niederlande','Dell XPS 15',20190228,1299,7],['Schweiz','HP Spectre x360',20190228,1399,5],
+  ['Österreich','Lenovo ThinkPad',20190228,1599,2],['Belgien','Logitech MX Mas',20190228,99,20],
+  ['Spanien','iPhone 11',20190331,799,6],['Frankreich','OnePlus 7T',20190331,599,10],
+  ['Spanien','Samsung Galaxy',20190331,699,11],['Niederlande','MacBook Pro 13',20190331,1499,6],
+  ['Deutschland','Dell XPS 15',20190331,1299,8],['Schweiz','HP Spectre x360',20190331,1399,6],
+  ['Belgien','Lenovo ThinkPad',20190331,1599,5],['Italien','Logitech MX Mas',20190331,99,18],
+  ['Österreich','iPhone 11',20190131,799,10],['Frankreich','OnePlus 7T',20190131,599,8],
+  ['Spanien','Samsung Galaxy',20190131,699,12],['Italien','MacBook Pro 13',20190131,1499,5],
+  ['Niederlande','Dell XPS 15',20190131,1299,6],['Schweiz','HP Spectre x360',20190131,1399,4],
+  ['Österreich','Lenovo ThinkPad',20190131,1599,3],['Belgien','Logitech MX Mas',20190131,99,15],
+  ['Deutschland','iPhone 11',20190228,799,7],['Spanien','OnePlus 7T',20190228,599,9],
+  ['Niederlande','Samsung Galaxy',20190228,699,10],['Italien','MacBook Pro 13',20190228,1499,4],
+  ['Niederlande','Dell XPS 15',20190228,1299,7],['Deutschland','HP Spectre x360',20190228,1399,5],
+  ['Belgien','Lenovo ThinkPad',20190228,1599,2],['Italien','Logitech MX Mas',20190228,99,20],
+  ['Österreich','iPhone 11',20190331,799,6],['Frankreich','OnePlus 7T',20190331,599,10],
+  ['Spanien','Samsung Galaxy',20190331,699,11],['Niederlande','MacBook Pro 13',20190331,1499,6],
+  ['Frankreich','Dell XPS 15',20190331,1299,8],['Schweiz','HP Spectre x360',20190331,1399,6],
+  ['Österreich','Lenovo ThinkPad',20190331,1599,5],['Belgien','Logitech MX Mas',20190331,99,18],
+  ['Deutschland','iPhone 11',20190430,799,9],['Frankreich','OnePlus 7T',20190430,599,11],
+  ['Spanien','Samsung Galaxy',20190430,699,13],['Schweiz','MacBook Pro 13',20190430,1499,7],
+  ['Niederlande','Dell XPS 15',20190430,1299,9],['Niederlande','HP Spectre x360',20190430,1399,7],
+  ['Österreich','Lenovo ThinkPad',20190430,1599,4],['Spanien','Logitech MX Mas',20190430,99,16],
+  ['Deutschland','iPhone 11',20190531,799,8],['Belgien','OnePlus 7T',20190531,599,12],
+  ['Spanien','Samsung Galaxy',20190531,699,14],['Italien','MacBook Pro 13',20190531,1499,8],
+  ['Frankreich','Dell XPS 15',20190531,1299,10],['Schweiz','HP Spectre x360',20190531,1399,8],
+  ['Österreich','Lenovo ThinkPad',20190531,1599,3],['Italien','Logitech MX Mas',20190531,99,17],
+  ['Deutschland','iPhone 11',20190630,799,7],['Frankreich','OnePlus 7T',20190630,599,13],
+  ['Spanien','Samsung Galaxy',20190630,699,15],['Niederlande','MacBook Pro 13',20190630,1499,9],
+  ['Niederlande','Dell XPS 15',20190630,1299,11],['Schweiz','HP Spectre x360',20190630,1399,9],
+  ['Österreich','Lenovo ThinkPad',20190630,1599,2],['Frankreich','Logitech MX Mas',20190630,99,15],
+  ['Schweiz','iPhone 11',20190731,799,6],['Frankreich','OnePlus 7T',20190731,599,14],
+  ['Spanien','Samsung Galaxy',20190731,699,16],['Belgien','MacBook Pro 13',20190731,1499,10],
+  ['Niederlande','HP Spectre x360',20190731,1399,10],['Deutschland','iPhone 11',20190731,799,8],
+  ['Österreich','Lenovo ThinkPad',20190731,1599,3],['Belgien','Logitech MX Mas',20190731,99,12],
+  ['Deutschland','iPhone 11',20190831,799,7],['Deutschland','OnePlus 7T',20190831,599,13],
+  ['Italien','Samsung Galaxy',20190831,699,15],['Italien','MacBook Pro 13',20190831,1499,11],
+  ['Niederlande','Dell XPS 15',20190831,1299,13],['Schweiz','HP Spectre x360',20190831,1399,11],
+  ['Österreich','Lenovo ThinkPad',20190831,1599,4],['Belgien','Logitech MX Mas',20190831,99,14],
+  ['Frankreich','iPhone 11',20190930,799,6],['Frankreich','OnePlus 7T',20190930,599,12],
+  ['Spanien','Samsung Galaxy',20190930,699,12],['Niederlande','MacBook Pro 13',20190930,1499,9],
+  ['Schweiz','Dell XPS 15',20190930,1299,12],['Schweiz','HP Spectre x360',20190930,1399,9],
+  ['Österreich','Lenovo ThinkPad',20190930,1599,3],['Deutschland','Logitech MX Mas',20190930,99,13],
+  ['Deutschland','iPhone 11',20191031,799,5],['Frankreich','OnePlus 7T',20191031,599,11],
+  ['Spanien','Samsung Galaxy',20191031,699,13],['Italien','MacBook Pro 13',20191031,1499,9],
+  ['Italien','Dell XPS 15',20191031,1299,11],['Schweiz','HP Spectre x360',20191031,1399,8],
+  ['Österreich','Lenovo ThinkPad',20191031,1599,2],['Belgien','Logitech MX Mas',20191031,99,12],
+  ['Deutschland','iPhone 11',20191130,799,4],['Frankreich','OnePlus 7T',20191130,599,10],
+  ['Frankreich','Samsung Galaxy',20191130,699,12],['Italien','MacBook Pro 13',20191130,1499,8],
+  ['Niederlande','Dell XPS 15',20191130,1299,10],['Schweiz','HP Spectre x360',20191130,1399,7],
+  ['Niederlande','Lenovo ThinkPad',20191130,1599,1],['Deutschland','Logitech MX Mas',20191130,99,11],
+  ['Deutschland','iPhone 11',20191231,799,3],['Frankreich','OnePlus 7T',20191231,599,9],
+  ['Spanien','Samsung Galaxy',20191231,699,11],['Italien','MacBook Pro 13',20191231,1499,7],
+  ['Niederlande','Dell XPS 15',20191231,1299,9],['Schweiz','HP Spectre x360',20191231,1399,6],
+  ['Österreich','Lenovo ThinkPad',20191231,1599,1],['Belgien','Logitech MX Mas',20191231,99,10],
+  ['Deutschland','iPhone 11',20200131,799,2],['Frankreich','OnePlus 7T',20200131,599,8],
+  ['Spanien','Samsung Galaxy',20200131,699,10],['Italien','MacBook Pro 13',20200131,1499,6],
+  ['Niederlande','Dell XPS 15',20200131,1299,8],['Schweiz','HP Spectre x360',20200131,1399,5],
+  ['Österreich','Lenovo ThinkPad',20200131,1599,1],['Belgien','Logitech MX Mas',20200131,99,9],
+  ['Deutschland','iPhone 11',20200229,799,1]
+];
+
+const DATA = RAW.map(r => {
+  const d = String(r[2]);
+  return {
+    land: r[0], produkt: r[1], datum: r[2], preis: r[3], menge: r[4],
+    umsatz: r[3]*r[4],
+    region: DIM_GEO[r[0]]||'Unbekannt',
+    kat: DIM_PROD[r[1]]||'Sonstige',
+    jahr: d.slice(0,4),
+    monLabel: d.slice(0,4)+'-'+d.slice(4,6)
+  };
+});
+
+let charts = {};
+function destroyChart(id) { if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+function groupBy(arr,key) { const m={}; arr.forEach(d=>{m[d[key]]=(m[d[key]]||0)+d.umsatz;}); return m; }
+function groupByMenge(arr,key) { const m={}; arr.forEach(d=>{m[d[key]]=(m[d[key]]||0)+d.menge;}); return m; }
+
+function getFiltered() {
+  const land = document.getElementById('sl-land').value;
+  const kat = document.getElementById('sl-kat').value;
+  const jahr = document.getElementById('sl-jahr').value;
+  return DATA.filter(d=>(!land||d.land===land)&&(!kat||d.kat===kat)&&(!jahr||d.jahr===jahr));
+}
+
+function applyFilters() {
+  const fd = getFiltered();
+  const parts = [document.getElementById('sl-land').value, document.getElementById('sl-kat').value, document.getElementById('sl-jahr').value].filter(Boolean);
+  document.getElementById('filter-badge').textContent = parts.length ? parts.join(' · ') : 'Alle Daten';
+
+  const totalU = fd.reduce((s,d)=>s+d.umsatz,0);
+  const totalM = fd.reduce((s,d)=>s+d.menge,0);
+  const avgP = fd.length ? Math.round(fd.reduce((s,d)=>s+d.preis,0)/fd.length) : 0;
+  document.getElementById('kpi-umsatz').textContent = totalU>=1000000 ? (totalU/1000000).toFixed(2)+' Mio. €' : (totalU/1000).toFixed(0)+' Tsd. €';
+  document.getElementById('kpi-trans').textContent = fd.length.toLocaleString('de');
+  document.getElementById('kpi-menge').textContent = totalM.toLocaleString('de');
+  document.getElementById('kpi-avg').textContent = avgP.toLocaleString('de')+' €';
+
+  // Time chart
+  destroyChart('time');
+  const byMon={}; fd.forEach(d=>{byMon[d.monLabel]=(byMon[d.monLabel]||0)+d.umsatz;});
+  const tLabels=Object.keys(byMon).sort();
+  const tVals=tLabels.map(l=>byMon[l]);
+  document.getElementById('leg-time').innerHTML='<span><span class="ld" style="background:#0078d4"></span>Monatsumsatz (€)</span>';
+  charts['time']=new Chart(document.getElementById('cTime'),{type:'bar',
+    data:{labels:tLabels.map(l=>{const p=l.split('-');return p[0].slice(2)+'/'+p[1];}),
+      datasets:[{label:'Umsatz',data:tVals,backgroundColor:'#0078d4',borderRadius:3,barPercentage:0.75}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{size:10},maxRotation:45,autoSkip:false}},
+              y:{ticks:{callback:v=>v>=1000?(v/1000).toFixed(0)+'K €':v,font:{size:10}}}}}});
+
+  // Region chart
+  destroyChart('reg');
+  const byReg=groupBy(fd,'region');
+  const rLabels=Object.keys(byReg);
+  const rVals=rLabels.map(l=>byReg[l]);
+  const rTotal=rVals.reduce((s,v)=>s+v,0);
+  document.getElementById('leg-reg').innerHTML=rLabels.map((l,i)=>
+    `<span><span class="ld" style="background:${COLORS_REG[l]||'#888'}"></span>${l} ${rTotal>0?Math.round(rVals[i]/rTotal*100)+'%':''}</span>`
+  ).join('');
+  charts['reg']=new Chart(document.getElementById('cReg'),{type:'doughnut',
+    data:{labels:rLabels,datasets:[{data:rVals,backgroundColor:rLabels.map(l=>COLORS_REG[l]||'#888'),borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{display:false}}}});
+
+  // Land chart
+  destroyChart('land');
+  const byL=groupBy(fd,'land');
+  const lE=Object.entries(byL).sort((a,b)=>b[1]-a[1]);
+  charts['land']=new Chart(document.getElementById('cLand'),{type:'bar',
+    data:{labels:lE.map(e=>e[0]),datasets:[{label:'Umsatz',data:lE.map(e=>e[1]),
+      backgroundColor:lE.map(e=>COLORS_LAND[e[0]]||'#888'),borderRadius:3,barPercentage:0.75}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},
+      scales:{x:{ticks:{callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v,font:{size:10}}},
+              y:{ticks:{font:{size:10}}}}}});
+
+  // Kat chart
+  destroyChart('kat');
+  const byK=groupBy(fd,'kat');
+  const kLabels=Object.keys(byK);
+  const kVals=kLabels.map(l=>byK[l]);
+  const kTotal=kVals.reduce((s,v)=>s+v,0);
+  charts['kat']=new Chart(document.getElementById('cKat'),{type:'pie',
+    data:{labels:kLabels.map((l,i)=>`${l} (${kTotal>0?Math.round(kVals[i]/kTotal*100):'0'}%)`),
+      datasets:[{data:kVals,backgroundColor:kLabels.map(l=>COLORS_KAT[l]||'#888'),borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10,boxWidth:12}}}}});
+
+  // Prod chart
+  destroyChart('prod');
+  const byP=groupByMenge(fd,'produkt');
+  const pE=Object.entries(byP).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  charts['prod']=new Chart(document.getElementById('cProd'),{type:'bar',
+    data:{labels:pE.map(e=>e[0].length>14?e[0].slice(0,14)+'…':e[0]),
+      datasets:[{label:'Menge',data:pE.map(e=>e[1]),backgroundColor:'#107c41',borderRadius:3,barPercentage:0.75}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}}});
+}
+
+applyFilters();
+</script>
+</body>
+</html>
